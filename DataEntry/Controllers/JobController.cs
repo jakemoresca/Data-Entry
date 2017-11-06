@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DataEntry.Controllers
 {
@@ -13,6 +14,7 @@ namespace DataEntry.Controllers
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
+        [Authorize]
         [HttpGet("[action]")]
         public IEnumerable<Job> Jobs(int startDateIndex)
         {
@@ -26,7 +28,8 @@ namespace DataEntry.Controllers
                 CreatedBy = "test"
             });
         }
-        
+
+        [Authorize]
         [HttpGet("{jobId}")]
         public Job Get(string jobId)
         {
@@ -41,6 +44,7 @@ namespace DataEntry.Controllers
             };
         }
 
+        [Authorize]
         [HttpPost]
         public Job Post(Job Job)
         {
@@ -51,6 +55,7 @@ namespace DataEntry.Controllers
             return Job;
         }
 
+        [Authorize]
         [HttpPut("{jobId}")]
         public Job Put(string jobId, Job Job)
         {
@@ -58,6 +63,7 @@ namespace DataEntry.Controllers
             return Job;
         }
 
+        [Authorize]
         [HttpDelete("{jobId}")]
         public StatusCodeResult Delete(string jobId)
         {

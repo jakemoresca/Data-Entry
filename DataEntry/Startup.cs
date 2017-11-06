@@ -12,6 +12,12 @@ using IdentityServer4.Models;
 using IdentityServer4;
 using IdentityModel;
 using IdentityServer4.Validation;
+using IdentityServer4.Configuration;
+using Microsoft.EntityFrameworkCore.Internal;
+using IdentityServer4.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using DataEntry.Dao;
 
 namespace DataEntry
 {
@@ -54,11 +60,23 @@ namespace DataEntry
             //    .AddAuthorization()
             //    .AddJsonFormatters();
 
+            services.AddDbContext<DataEntryDBContext>(options =>
+                options.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=DataEntry;Trusted_Connection=True;"));
+            //Configuration.GetConnectionString("DefaultConnection")));
+
+            services.AddIdentity<ApplicationUser, IdentityRole>()
+                .AddEntityFrameworkStores<DataEntryDBContext>()
+                .AddDefaultTokenProviders();
+
+            // Add application services.
+            //services.AddTransient<IEmailSender, EmailSender>();
+
             services.AddIdentityServer()
                 .AddDeveloperSigningCredential()
                 .AddInMemoryIdentityResources(GetIdentityResources())
                 .AddInMemoryApiResources(GetApis())
                 .AddInMemoryClients(GetClients())
+                .AddAspNetIdentity<ApplicationUser>()
                 .AddResourceOwnerValidator<TestValidator>();
 
             //services.AddCors(options =>
@@ -112,6 +130,11 @@ namespace DataEntry
             var javascriptClient = new Client
             {
                 ClientId = "js",
+                ClientSecrets =
+                {
+                    new Secret("secret".Sha256())
+                },
+
                 ClientName = "JavaScript Client",
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
                 AllowAccessTokensViaBrowser = true,
@@ -122,7 +145,6 @@ namespace DataEntry
 
                 AllowedScopes =
                 {
-                    IdentityServerConstants.StandardScopes.OpenId,
                     IdentityServerConstants.StandardScopes.Profile,
                     "api1"
                 }
@@ -144,38 +166,7 @@ namespace DataEntry
         {
             return new[]
             {
-                // simple API with a single scope (in this case the scope name is the same as the api name)
-                new ApiResource("api1", "Some API 1"),
-
-                // expanded version if more control is needed
-                new ApiResource
-                {
-                    Name = "api2",
-
-                    // secret for using introspection endpoint
-                    ApiSecrets =
-                    {
-                        new Secret("secret".Sha256())
-                    },
-
-                    // include the following using claims in access token (in addition to subject id)
-                    UserClaims = { JwtClaimTypes.Name, JwtClaimTypes.Email },
-
-                    // this API defines two scopes
-                    Scopes =
-                    {
-                        new Scope()
-                        {
-                            Name = "api2.full_access",
-                            DisplayName = "Full access to API 2",
-                        },
-                        new Scope
-                        {
-                            Name = "api2.read_only",
-                            DisplayName = "Read only access to API 2"
-                        }
-                    }
-                }
+                new ApiResource("api1", "Some API 1")
             };
         }
     }
