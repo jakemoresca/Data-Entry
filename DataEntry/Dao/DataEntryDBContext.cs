@@ -11,15 +11,17 @@ namespace DataEntry.Dao
     {
         public DataEntryDBContext(DbContextOptions<DataEntryDBContext> options)
             : base(options)
-        { }
+        {
+        }
 
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
         public DbSet<JobDto> Jobs { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=DataEntry;Trusted_Connection=True;");
-        }
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+
+        //    optionsBuilder.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=DataEntry;Trusted_Connection=True;");
+        //}
     }
 
     public class ApplicationUser : IdentityUser

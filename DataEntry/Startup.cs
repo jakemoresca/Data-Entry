@@ -18,6 +18,10 @@ using IdentityServer4.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using DataEntry.Dao;
+using IdentityServer4.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace DataEntry
 {
@@ -51,6 +55,42 @@ namespace DataEntry
             }
         }
 
+        public class TestProfileService : IProfileService
+        {
+            public Task GetProfileDataAsync(ProfileDataRequestContext context)
+            {
+                string subject = context.Subject.Claims.ToList().Find(s => s.Type == "sub").Value;
+                try
+                {
+                    // Get Claims From Database, And Use Subject To Find The Related Claims, As A Subject Is An Unique Identity Of User
+                    List<string> claimStringList = new List<string> { };
+                    if (claimStringList == null)
+                    {
+                        return Task.FromResult(0);
+                    }
+                    else
+                    {
+                        List<Claim> claimList = new List<Claim>();
+                        for (int i = 0; i < claimStringList.Count; i++)
+                        {
+                            claimList.Add(new Claim("role", claimStringList[i]));
+                        }
+                        context.IssuedClaims = claimList.Where(x => context.RequestedClaimTypes.Contains(x.Type)).ToList();
+                        return Task.FromResult(0);
+                    }
+                }
+                catch
+                {
+                    return Task.FromResult(0);
+                }
+            }
+
+            public Task IsActiveAsync(IsActiveContext context)
+            {
+                return Task.FromResult(0);
+            }
+        }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -61,8 +101,7 @@ namespace DataEntry
             //    .AddJsonFormatters();
 
             services.AddDbContext<DataEntryDBContext>(options =>
-                options.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=DataEntry;Trusted_Connection=True;"));
-            //Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<DataEntryDBContext>()
@@ -76,8 +115,19 @@ namespace DataEntry
                 .AddInMemoryIdentityResources(GetIdentityResources())
                 .AddInMemoryApiResources(GetApis())
                 .AddInMemoryClients(GetClients())
-                .AddAspNetIdentity<ApplicationUser>()
-                .AddResourceOwnerValidator<TestValidator>();
+                .AddAspNetIdentity<ApplicationUser>();
+                //.AddProfileService<TestProfileService>()
+                //.AddResourceOwnerValidator<TestValidator>();
+
+            //services.AddAuthorization();
+            //services.AddJwtBearerAuthentication(o =>
+            //{
+            //    o.Authority = "https://0.0.0.0:5005";
+            //    o.Audience = "https://0.0.0.0:5005/resources";
+            //});
+
+            //services.AddAuthenticationCore()
+            //    .AddJwtBearer();
 
             //services.AddCors(options =>
             //{
@@ -123,6 +173,13 @@ namespace DataEntry
                     name: "spa-fallback",
                     defaults: new { controller = "Home", action = "Index" });
             });
+
+            using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetRequiredService<DataEntryDBContext>();
+                var userManager = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                SampleData.Initialize(context, userManager);
+            }
         }
 
         protected IEnumerable<Client> GetClients()
@@ -146,6 +203,7 @@ namespace DataEntry
                 AllowedScopes =
                 {
                     IdentityServerConstants.StandardScopes.Profile,
+                    IdentityServerConstants.StandardScopes.OpenId,
                     "api1"
                 }
             };
@@ -166,7 +224,7 @@ namespace DataEntry
         {
             return new[]
             {
-                new ApiResource("api1", "Some API 1")
+                new ApiResource("openid", "Some API 1")
             };
         }
     }

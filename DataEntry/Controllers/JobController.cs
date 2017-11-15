@@ -14,10 +14,11 @@ namespace DataEntry.Controllers
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        [Authorize]
+        //[Authorize]
         [HttpGet("[action]")]
         public IEnumerable<Job> Jobs(int startDateIndex)
         {
+            var user = User;
             var rng = new Random();
             return Enumerable.Range(1, 5).Select(index => new Job
             {
