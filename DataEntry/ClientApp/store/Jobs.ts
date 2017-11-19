@@ -2,6 +2,7 @@ import { fetch, addTask } from 'domain-task';
 import { Action, Reducer, ActionCreator } from 'redux';
 import { AppThunkAction } from './';
 import * as jQuery from 'jquery';
+import { callApi } from './callApi';
 
 // -----------------
 // STATE - This defines the type of data maintained in the Redux store.
@@ -18,7 +19,26 @@ export interface Job {
     name: string;
     dateCreated: string;
     dateModified: string;
-    createdBy: string;
+    createdBy: User;
+}
+
+export interface User
+{
+    id: string;
+    userName: string;
+    normalizedUserName: string;
+    email: string;
+    normalizedEmail: string;
+    emailConfirmed: boolean;
+    passwordHash: string;
+    securityStamp: string;
+    concurrencyStamp: string;
+    phoneNumber: string;
+    phoneNumberConfirmed: boolean;
+    twoFactorEnabled: boolean;
+    lockoutEnd?: string;
+    lockoutEnabled: boolean;
+    accessFailedCount: number;
 }
 
 // -----------------
@@ -80,12 +100,14 @@ type KnownAction = RequestJobsAction | ReceiveJobsAction | RequestJobAction | Re
 // They don't directly mutate state, but they can have external side-effects (such as loading data).
 
 export const actionCreators = {
-    requestJobs: (startDateIndex: number): AppThunkAction<KnownAction> => (dispatch, getState) => {
-        // Only load data if it's something we don't already have (and are not already loading)
+    requestJobs: (startDateIndex: number): AppThunkAction<KnownAction> => (dispatch, getState) =>
+    {
+        //Only load data if it's something we don't already have (and are not already loading)
         if (startDateIndex !== getState().jobs.startDateIndex) {
-            let fetchTask = fetch(`api/job/Jobs?startDateIndex=${ startDateIndex }`)
-                .then(response => response.json() as Promise<Job[]>)
-                .then(data => {
+            let fetchTask = callApi(`api/job/Jobs?startDateIndex=${startDateIndex}`, true) //fetch(`api/job/Jobs?startDateIndex=${ startDateIndex }`)
+                .then(response => response as Promise<Job[]>)
+                .then(data =>
+                {
                     dispatch({ type: 'RECEIVE_JOBS', startDateIndex: startDateIndex, jobs: data });
                 });
 
@@ -97,7 +119,7 @@ export const actionCreators = {
     requestJob: (jobId: string): AppThunkAction<KnownAction> => (dispatch, getState) => {
         if(jobId !== "")
         {
-            let fetchTask = jQuery.get(`api/job/${ jobId }`)
+            let fetchTask = callApi(`api/job/${jobId}`, true)// jQuery.get(`api/job/${ jobId }`)
                 .then(response => response as Promise<Job>)
                 .then(data => {
                     dispatch({ type: 'RECEIVE_JOB', jobId: jobId, job: data });
@@ -120,7 +142,12 @@ export const actionCreators = {
     {
         if (getState().jobs.currentJob.id === "")
         {
-            let insertTask = jQuery.post("api/job", { job: getState().jobs.currentJob })
+            var data = {
+                type: 'POST',
+                data: { job: getState().jobs.currentJob }
+            };
+
+            let insertTask = callApi("api/job", true, data) //jQuery.post("api/job", { job: getState().jobs.currentJob })
                 .then(response => response as Promise<Job>)
                 .then(data =>
                 {
@@ -131,11 +158,16 @@ export const actionCreators = {
         }
         else
         {
-            let updateTask = jQuery.ajax({
-                    url: `api/job/${getState().jobs.currentJob.id}`,
-                    type: "PUT",
-                    data: { job: getState().jobs.currentJob }
-                })
+            var data = {
+                type: 'PUT',
+                data: { job: getState().jobs.currentJob }
+            };
+
+            let updateTask = callApi(`api/job/${getState().jobs.currentJob.id}`, true, data) // jQuery.ajax({
+                    //url: `api/job/${getState().jobs.currentJob.id}`,
+                   // type: "PUT",
+                   // data: { job: getState().jobs.currentJob }
+                    //})
                 .then(response => response as Promise<Job>)
                 .then(data =>
                 {
@@ -152,15 +184,16 @@ export const actionCreators = {
     {
         if (jobId !== "")
         {
-            let deleteTask = jQuery.ajax({
-                    url: `api/job/${jobId}`,
-                    type: "DELETE"
-                })
+            var data = {
+                type: 'DELETE'
+            };
+
+            let deleteTask = callApi(`api/job/${jobId}`, true, data) //jQuery.ajax({ url: `api/job/${jobId}`, type: "DELETE" })
                 .then(response =>
                 {
                     let startDateIndex = getState().jobs.startDateIndex || 0;
-                    let fetchTask = fetch(`api/job/Jobs?startDateIndex=${startDateIndex}`)
-                        .then(response => response.json() as Promise<Job[]>)
+                    let fetchTask = callApi(`api/job/Jobs?startDateIndex=${startDateIndex}`, true) //fetch(`api/job/Jobs?startDateIndex=${startDateIndex}`)
+                        .then(response => response as Promise<Job[]>)
                         .then(data =>
                         {
                             dispatch({ type: 'RECEIVE_JOBS', startDateIndex: startDateIndex, jobs: data });
@@ -187,7 +220,23 @@ const unloadedState: JobsState = {
         name: "",
         dateCreated: "",
         dateModified: "",
-        createdBy: ""
+        createdBy: {
+            id: "",
+            userName: "",
+            normalizedUserName: "",
+            email: "",
+            normalizedEmail: "",
+            emailConfirmed: false,
+            passwordHash: "",
+            securityStamp: "",
+            concurrencyStamp: "",
+            phoneNumber: "",
+            phoneNumberConfirmed: false,
+            twoFactorEnabled: false,
+            lockoutEnd: "",
+            lockoutEnabled: false,
+            accessFailedCount: 0
+        }
     }
 };
 
@@ -206,7 +255,23 @@ export const reducer: Reducer<JobsState> = (state: JobsState, incomingAction: Ac
                     name: "",
                     dateCreated: "",
                     dateModified: "",
-                    createdBy: ""
+                    createdBy: {
+                        id: "",
+                        userName: "",
+                        normalizedUserName: "",
+                        email: "",
+                        normalizedEmail: "",
+                        emailConfirmed: false,
+                        passwordHash: "",
+                        securityStamp: "",
+                        concurrencyStamp: "",
+                        phoneNumber: "",
+                        phoneNumberConfirmed: false,
+                        twoFactorEnabled: false,
+                        lockoutEnd: "",
+                        lockoutEnabled: false,
+                        accessFailedCount: 0
+                    }
                 }
             };
         case 'RECEIVE_JOBS':
@@ -224,7 +289,23 @@ export const reducer: Reducer<JobsState> = (state: JobsState, incomingAction: Ac
                         name: "",
                         dateCreated: "",
                         dateModified: "",
-                        createdBy: ""
+                        createdBy: {
+                            id: "",
+                            userName: "",
+                            normalizedUserName: "",
+                            email: "",
+                            normalizedEmail: "",
+                            emailConfirmed: false,
+                            passwordHash: "",
+                            securityStamp: "",
+                            concurrencyStamp: "",
+                            phoneNumber: "",
+                            phoneNumberConfirmed: false,
+                            twoFactorEnabled: false,
+                            lockoutEnd: "",
+                            lockoutEnabled: false,
+                            accessFailedCount: 0
+                        }
                     }
                 };
             }
@@ -241,7 +322,23 @@ export const reducer: Reducer<JobsState> = (state: JobsState, incomingAction: Ac
                     name: "",
                     dateCreated: "",
                     dateModified: "",
-                    createdBy: ""
+                    createdBy: {
+                        id: "",
+                        userName: "",
+                        normalizedUserName: "",
+                        email: "",
+                        normalizedEmail: "",
+                        emailConfirmed: false,
+                        passwordHash: "",
+                        securityStamp: "",
+                        concurrencyStamp: "",
+                        phoneNumber: "",
+                        phoneNumberConfirmed: false,
+                        twoFactorEnabled: false,
+                        lockoutEnd: "",
+                        lockoutEnabled: false,
+                        accessFailedCount: 0
+                    }
                 }
             };
         case 'RECEIVE_JOB':
@@ -277,7 +374,23 @@ export const reducer: Reducer<JobsState> = (state: JobsState, incomingAction: Ac
                     name: "",
                     dateCreated: "",
                     dateModified: "",
-                    createdBy: ""
+                    createdBy: {
+                        id: "",
+                        userName: "",
+                        normalizedUserName: "",
+                        email: "",
+                        normalizedEmail: "",
+                        emailConfirmed: false,
+                        passwordHash: "",
+                        securityStamp: "",
+                        concurrencyStamp: "",
+                        phoneNumber: "",
+                        phoneNumberConfirmed: false,
+                        twoFactorEnabled: false,
+                        lockoutEnd: "",
+                        lockoutEnabled: false,
+                        accessFailedCount: 0
+                    }
                 }
             };
         case "SAVE_JOB":
@@ -298,7 +411,23 @@ export const reducer: Reducer<JobsState> = (state: JobsState, incomingAction: Ac
                     name: "",
                     dateCreated: "",
                     dateModified: "",
-                    createdBy: ""
+                    createdBy: {
+                        id: "",
+                        userName: "",
+                        normalizedUserName: "",
+                        email: "",
+                        normalizedEmail: "",
+                        emailConfirmed: false,
+                        passwordHash: "",
+                        securityStamp: "",
+                        concurrencyStamp: "",
+                        phoneNumber: "",
+                        phoneNumberConfirmed: false,
+                        twoFactorEnabled: false,
+                        lockoutEnd: "",
+                        lockoutEnabled: false,
+                        accessFailedCount: 0
+                    }
                 }
             }
         default:

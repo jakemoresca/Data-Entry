@@ -22,6 +22,9 @@ using IdentityServer4.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using IdentityServer4.Extensions;
 
 namespace DataEntry
 {
@@ -57,37 +60,38 @@ namespace DataEntry
 
         public class TestProfileService : IProfileService
         {
-            public Task GetProfileDataAsync(ProfileDataRequestContext context)
+            private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsFactory;
+            private readonly UserManager<ApplicationUser> _userManager;
+
+            public TestProfileService(IUserClaimsPrincipalFactory<ApplicationUser> claimsFactory, UserManager<ApplicationUser> userManager)
             {
-                string subject = context.Subject.Claims.ToList().Find(s => s.Type == "sub").Value;
-                try
-                {
-                    // Get Claims From Database, And Use Subject To Find The Related Claims, As A Subject Is An Unique Identity Of User
-                    List<string> claimStringList = new List<string> { };
-                    if (claimStringList == null)
-                    {
-                        return Task.FromResult(0);
-                    }
-                    else
-                    {
-                        List<Claim> claimList = new List<Claim>();
-                        for (int i = 0; i < claimStringList.Count; i++)
-                        {
-                            claimList.Add(new Claim("role", claimStringList[i]));
-                        }
-                        context.IssuedClaims = claimList.Where(x => context.RequestedClaimTypes.Contains(x.Type)).ToList();
-                        return Task.FromResult(0);
-                    }
-                }
-                catch
-                {
-                    return Task.FromResult(0);
-                }
+                _claimsFactory = claimsFactory;
+                _userManager = userManager;
             }
 
-            public Task IsActiveAsync(IsActiveContext context)
+            public async Task GetProfileDataAsync(ProfileDataRequestContext context)
             {
-                return Task.FromResult(0);
+                var sub = context.Subject.GetSubjectId();
+                var user = await _userManager.FindByIdAsync(sub);
+                if (user == null)
+                {
+                    throw new ArgumentException("");
+                }
+
+                var principal = await _claimsFactory.CreateAsync(user);
+                var claims = principal.Claims.ToList();
+
+                //Add more claims like this
+                //claims.Add(new System.Security.Claims.Claim("MyProfileID", user.Id));
+
+                context.IssuedClaims = claims;
+            }
+
+            public async Task IsActiveAsync(IsActiveContext context)
+            {
+                var sub = context.Subject.GetSubjectId();
+                var user = await _userManager.FindByIdAsync(sub);
+                context.IsActive = user != null;
             }
         }
 
@@ -110,24 +114,45 @@ namespace DataEntry
             // Add application services.
             //services.AddTransient<IEmailSender, EmailSender>();
 
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.Audience = "http://localhost:5003/resources";
+                options.Authority = "http://localhost:5003/";
+                options.RequireHttpsMetadata = false;
+                //options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                //{
+                //    NameClaimType = JwtClaimTypes.Name,
+                //    RoleClaimType = JwtClaimTypes.Role
+                //};
+            });
+
             services.AddIdentityServer()
                 .AddDeveloperSigningCredential()
                 .AddInMemoryIdentityResources(GetIdentityResources())
                 .AddInMemoryApiResources(GetApis())
                 .AddInMemoryClients(GetClients())
-                .AddAspNetIdentity<ApplicationUser>();
-                //.AddProfileService<TestProfileService>()
-                //.AddResourceOwnerValidator<TestValidator>();
+                .AddAspNetIdentity<ApplicationUser>()
+                .AddProfileService<TestProfileService>();
+            //.AddResourceOwnerValidator<TestValidator>();
 
-            //services.AddAuthorization();
-            //services.AddJwtBearerAuthentication(o =>
+            
+
+            //services.AddAuthentication(options =>
             //{
-            //    o.Authority = "https://0.0.0.0:5005";
-            //    o.Audience = "https://0.0.0.0:5005/resources";
+            //    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            //    options.DefaultAuthenticateScheme = OpenIdConnectDefaults.
+            //}).AddJwtBearer(options =>
+            //{
+            //    options.Authority = "http://localhost:5003/";
+            //    options.Audience = "resource-server";
+            //    options.RequireHttpsMetadata = false;
             //});
-
-            //services.AddAuthenticationCore()
-            //    .AddJwtBearer();
 
             //services.AddCors(options =>
             //{
@@ -139,10 +164,12 @@ namespace DataEntry
             //            .AllowAnyMethod();
             //    });
             //});
+
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public async void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -161,7 +188,8 @@ namespace DataEntry
             app.UseDefaultFiles();
             app.UseStaticFiles();
 
-            app.UseIdentityServer();
+            app.UseIdentityServer()
+                .UseAuthentication();
 
             app.UseMvc(routes =>
             {
@@ -177,8 +205,8 @@ namespace DataEntry
             using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 var context = serviceScope.ServiceProvider.GetRequiredService<DataEntryDBContext>();
-                var userManager = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                SampleData.Initialize(context, userManager);
+                var sampleData = new SampleData();
+                await sampleData.InitializeAsync(context);
             }
         }
 
@@ -203,8 +231,7 @@ namespace DataEntry
                 AllowedScopes =
                 {
                     IdentityServerConstants.StandardScopes.Profile,
-                    IdentityServerConstants.StandardScopes.OpenId,
-                    "api1"
+                    IdentityServerConstants.StandardScopes.OpenId
                 }
             };
 
@@ -217,6 +244,12 @@ namespace DataEntry
             {
                 new IdentityResources.Email(),
                 new IdentityResources.Profile(),
+                new IdentityResources.OpenId(),
+                new IdentityResource
+                {
+                    Name = JwtClaimTypes.Role,
+                    UserClaims = new List<string> { JwtClaimTypes.Role }
+                }
             };
         }
 
@@ -224,7 +257,15 @@ namespace DataEntry
         {
             return new[]
             {
-                new ApiResource("openid", "Some API 1")
+                new ApiResource
+                {
+                    Name = "openid",
+                    Description = "Some API 1",
+                    UserClaims =
+                    {
+                        JwtClaimTypes.Role
+                    }
+                }
             };
         }
     }

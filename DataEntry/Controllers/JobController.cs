@@ -3,71 +3,82 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using DataEntry.Dao;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataEntry.Controllers
 {
     [Route("api/[controller]")]
     public class JobController : Controller
     {
-        private static string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+        private readonly DataEntryDBContext _context;
+        const int ITEMS_PER_PAGE = 10;
 
-        //[Authorize]
+        public JobController(DataEntryDBContext context)
+        {
+            _context = context;
+        }
+
+        [Authorize(Roles = "Administrator,User")]
         [HttpGet("[action]")]
-        public IEnumerable<Job> Jobs(int startDateIndex)
+        public IEnumerable<JobDto> Jobs(int startDateIndex)
         {
-            var user = User;
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new Job
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = Summaries[index],
-                DateModified = DateTime.Now.AddDays(index + startDateIndex).ToString("d"),
-                DateCreated = DateTime.Now.AddDays(index + startDateIndex).ToString("d"),
-                CreatedBy = "test"
-            });
+            var itemsToSkip = ITEMS_PER_PAGE * startDateIndex;
+            return _context.Jobs
+                .Include(jobs => jobs.CreatedBy)
+                .Skip(itemsToSkip).Take(ITEMS_PER_PAGE).ToList();
         }
 
-        [Authorize]
+        [Authorize(Roles = "Administrator,User")]
         [HttpGet("{jobId}")]
-        public Job Get(string jobId)
+        public JobDto Get(Guid jobId)
         {
-            var rng = new Random();
-            return new Job
-            {
-                Id = jobId,
-                Name = Summaries[rng.Next(1, 5)],
-                DateModified = DateTime.UtcNow.ToString("d"),
-                DateCreated = DateTime.UtcNow.ToString("d"),
-                CreatedBy = "test"
-            };
+            return _context.Jobs
+                .Include(jobs => jobs.CreatedBy)
+                .FirstOrDefault(x => x.Id == jobId);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Administrator,User")]
         [HttpPost]
-        public Job Post(Job Job)
+        public JobDto Post(JobDto job)
         {
-            Job.Id = Guid.NewGuid().ToString();
-            Job.DateModified = DateTime.UtcNow.ToString("d");
-            Job.DateCreated = DateTime.UtcNow.ToString("d");
-            Job.CreatedBy = "user";
-            return Job;
+            var userClaims = User.Claims.ToList();
+            var nameClaim = userClaims.FirstOrDefault(x => x.Type == "name");
+            var user = _context.Users.FirstOrDefault(x => x.UserName == nameClaim.Value);
+
+            job.Id = Guid.NewGuid();
+            job.DateModified = DateTime.UtcNow;
+            job.DateCreated = DateTime.UtcNow;
+            job.CreatedBy = user;
+
+            _context.Jobs.Add(job);
+            _context.SaveChanges();
+
+            return job;
         }
 
-        [Authorize]
+        [Authorize(Roles = "Administrator,User")]
         [HttpPut("{jobId}")]
-        public Job Put(string jobId, Job Job)
+        public JobDto Put(Guid jobId, JobDto job)
         {
-            Job.DateModified = DateTime.UtcNow.ToString("d");
-            return Job;
+            job.DateModified = DateTime.UtcNow;
+            _context.Jobs.Update(job);
+            _context.SaveChanges();
+
+            return job;
         }
 
-        [Authorize]
+        [Authorize(Roles = "Administrator,User")]
         [HttpDelete("{jobId}")]
-        public StatusCodeResult Delete(string jobId)
+        public StatusCodeResult Delete(Guid jobId)
         {
+            var job = _context.Jobs.FirstOrDefault(x => x.Id == jobId);
+            if (job == null)
+                return BadRequest();
+
+            _context.Jobs.Remove(job);
+            _context.SaveChanges();
+
             return Ok();
         }
 

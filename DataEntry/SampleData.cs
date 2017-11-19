@@ -1,4 +1,5 @@
 ﻿using DataEntry.Dao;
+using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using System;
@@ -12,22 +13,24 @@ namespace DataEntry
     public class SampleData
     { 
 
-        public async static void Initialize(DataEntryDBContext context, UserManager<ApplicationUser> userManager)
+        public async Task InitializeAsync(DataEntryDBContext context)
         {
             //var context = (DataEntryDBContext)serviceProvider.GetService(typeof(DataEntryDBContext));
 
-            string[] roles = new string[] { "Owner", "Administrator", "Manager", "Editor", "Buyer", "Business", "Seller", "Subscriber" };
+            string[] roles = new string[] { "Administrator", "User" };
 
-            //foreach (string role in roles)
-            //{
-            //    var roleStore = new RoleStore<IdentityRole>(context);
+            foreach (string role in roles)
+            {
+                var roleStore = new RoleStore<IdentityRole>(context);
 
-            //    if (!context.Roles.Any(r => r.Name == role))
-            //    {
-            //        await roleStore.CreateAsync(new IdentityRole(role));
-            //    }
-            //}
-
+                if (!context.Roles.Any(r => r.Name == role))
+                {
+                    var identityRole = new IdentityRole(role);
+                    identityRole.NormalizedName = role;
+                    await roleStore.CreateAsync(identityRole);
+                    await roleStore.AddClaimAsync(identityRole, new Claim(JwtClaimTypes.Role, "Administrator"));
+                }
+            }
 
             var user = new ApplicationUser
             {
@@ -51,30 +54,25 @@ namespace DataEntry
                 var userStore = new UserStore<ApplicationUser>(context);
                 var result = userStore.CreateAsync(user);
 
+                var claims = new List<Claim>
+                {
+                    new Claim(JwtClaimTypes.Email, user.Email),
+                    new Claim(JwtClaimTypes.Role, "Administrator"),
+                    new Claim(JwtClaimTypes.Name, user.UserName)
+                };
+
+                await userStore.AddClaimsAsync(user, claims);
+                await userStore.AddToRoleAsync(user, "Administrator");
             }
 
-            await userManager.AddClaimAsync(user, new Claim("email", user.Email));
-            await userManager.AddClaimAsync(user, new Claim("role", "admin"));
+            //var roleStore = new RoleStore<IdentityRole<string>>(context);
+
+            //await userManager.AddClaimAsync(user, new Claim("email", user.Email));
+            //await userManager.AddClaimAsync(user, new Claim("role", "admin"));
             //await AssignRoles(userManager, user.Email, roles);
             //await AssignClaims(userManager, user.Email, roles);
 
             await context.SaveChangesAsync();
         }
-
-        public static async Task<IdentityResult> AssignRoles(UserManager<ApplicationUser> userManager, string email, string[] roles)
-        {
-            ApplicationUser user = await userManager.FindByEmailAsync(email);
-            var result = await userManager.AddToRolesAsync(user, roles);
-            return result;
-        }
-
-        public static async Task<IdentityResult> AssignClaims(UserManager<ApplicationUser> userManager, string email, string[] roles)
-        {
-            ApplicationUser user = await userManager.FindByEmailAsync(email);
-            var result = await userManager.AddClaimAsync(user, new Claim("email", email));
-            result = await userManager.AddClaimAsync(user, new Claim("role", "admin"));
-            return result;
-        }
-
     }
 }

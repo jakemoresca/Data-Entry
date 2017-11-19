@@ -59,7 +59,7 @@ class Jobs extends React.Component<JobsProps, {}> {
                     <td>{ job.name }</td>
                     <td>{ job.dateCreated }</td>
                     <td>{ job.dateModified }</td>
-                    <td>{job.createdBy}</td>
+                    <td>{ job.createdBy.email }</td>
                     <td>
                         <Link className='btn btn-default pull-right' to={ `/jobdetail/${job.id}` }>Edit</Link>
                         <button type="button" className="btn btn-default pull-right" onClick={ () => this.handleDelete(job.id)}>Delete</button>
@@ -71,8 +71,8 @@ class Jobs extends React.Component<JobsProps, {}> {
     }
 
     private renderPagination() {
-        let prevStartDateIndex = (this.props.startDateIndex || 0) - 5;
-        let nextStartDateIndex = (this.props.startDateIndex || 0) + 5;
+        let prevStartDateIndex = (this.props.startDateIndex || 0) - 1;
+        let nextStartDateIndex = (this.props.startDateIndex || 0) + 1;
         let isPrevDisabled = prevStartDateIndex < 0;
 
         return <p className='clearfix text-center'>

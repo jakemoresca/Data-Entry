@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Link, RouteComponentProps } from 'react-router-dom';
 import { connect } from 'react-redux';
-import { ApplicationState }  from '../store';
+import { ApplicationState } from '../store';
 import * as JobsState from '../store/Jobs';
 
 // At runtime, Redux will merge together...
