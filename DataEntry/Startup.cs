@@ -122,8 +122,8 @@ namespace DataEntry
             })
             .AddJwtBearer(options =>
             {
-                options.Audience = "http://localhost:5003/resources";
-                options.Authority = "http://localhost:5003/";
+                options.Audience = "http://localhost/resources";
+                options.Authority = "http://localhost/";
                 options.RequireHttpsMetadata = false;
                 //options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
                 //{
@@ -224,9 +224,9 @@ namespace DataEntry
                 AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
                 AllowAccessTokensViaBrowser = true,
 
-                RedirectUris = { "http://localhost:5003/callback.html" },
-                PostLogoutRedirectUris = { "http://localhost:5003/index.html" },
-                AllowedCorsOrigins = { "http://localhost:5003" },
+                RedirectUris = { "http://localhost/callback.html" },
+                PostLogoutRedirectUris = { "http://localhost/index.html" },
+                AllowedCorsOrigins = { "http://localhost" },
 
                 AllowedScopes =
                 {
