@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.Webpack;
@@ -12,17 +11,10 @@ using IdentityServer4.Models;
 using IdentityServer4;
 using IdentityModel;
 using IdentityServer4.Validation;
-using IdentityServer4.Configuration;
-using Microsoft.EntityFrameworkCore.Internal;
-using IdentityServer4.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using DataEntry.Dao;
 using IdentityServer4.Services;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IdentityServer4.Extensions;
 
@@ -36,27 +28,6 @@ namespace DataEntry
         }
 
         public IConfiguration Configuration { get; }
-
-        public class TestValidator : IResourceOwnerPasswordValidator
-        {
-            public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
-            {
-                if (context.UserName == "test" && context.Password == "test")
-                {
-                    context.Result = new GrantValidationResult(
-                        subject: "818727",
-                        authenticationMethod: "custom");
-                }
-                else
-                {
-                    context.Result = new GrantValidationResult(
-                        TokenRequestErrors.InvalidGrant,
-                        "invalid custom credential");
-                }
-
-                return;
-            }
-        }
 
         public class TestProfileService : IProfileService
         {
@@ -81,9 +52,6 @@ namespace DataEntry
                 var principal = await _claimsFactory.CreateAsync(user);
                 var claims = principal.Claims.ToList();
 
-                //Add more claims like this
-                //claims.Add(new System.Security.Claims.Claim("MyProfileID", user.Id));
-
                 context.IssuedClaims = claims;
             }
 
@@ -99,10 +67,6 @@ namespace DataEntry
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc();
-
-            //services.AddMvcCore()
-            //    .AddAuthorization()
-            //    .AddJsonFormatters();
 
             services.AddDbContext<DataEntryDBContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
@@ -125,11 +89,6 @@ namespace DataEntry
                 options.Audience = "http://localhost/resources";
                 options.Authority = "http://localhost/";
                 options.RequireHttpsMetadata = false;
-                //options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-                //{
-                //    NameClaimType = JwtClaimTypes.Name,
-                //    RoleClaimType = JwtClaimTypes.Role
-                //};
             });
 
             services.AddIdentityServer()
@@ -139,33 +98,6 @@ namespace DataEntry
                 .AddInMemoryClients(GetClients())
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddProfileService<TestProfileService>();
-            //.AddResourceOwnerValidator<TestValidator>();
-
-            
-
-            //services.AddAuthentication(options =>
-            //{
-            //    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            //    options.DefaultAuthenticateScheme = OpenIdConnectDefaults.
-            //}).AddJwtBearer(options =>
-            //{
-            //    options.Authority = "http://localhost:5003/";
-            //    options.Audience = "resource-server";
-            //    options.RequireHttpsMetadata = false;
-            //});
-
-            //services.AddCors(options =>
-            //{
-            //    // this defines a CORS policy called "default"
-            //    options.AddPolicy("default", policy =>
-            //    {
-            //        policy.WithOrigins("http://localhost:5003")
-            //            .AllowAnyHeader()
-            //            .AllowAnyMethod();
-            //    });
-            //});
-
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -205,6 +137,7 @@ namespace DataEntry
             using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 var context = serviceScope.ServiceProvider.GetRequiredService<DataEntryDBContext>();
+                context.Database.Migrate();
                 var sampleData = new SampleData();
                 await sampleData.InitializeAsync(context);
             }
