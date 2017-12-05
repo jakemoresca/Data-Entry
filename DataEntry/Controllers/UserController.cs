@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using DataEntry.Dao;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using IdentityModel;
 using System.Security.Claims;
@@ -35,10 +34,10 @@ namespace DataEntry.Controllers
 
         [Authorize(Roles = "Administrator")]
         [HttpGet("{userId}")]
-        public ApplicationUser Get(string jobId)
+        public ApplicationUser Get(string userId)
         {
             return _context.Users
-                .FirstOrDefault(x => x.Id == jobId);
+                .FirstOrDefault(x => x.Id == userId);
         }
 
         [Authorize(Roles = "Administrator")]
@@ -97,7 +96,7 @@ namespace DataEntry.Controllers
         }
 
         [Authorize(Roles = "Administrator")]
-        [HttpDelete("{jobId}")]
+        [HttpDelete("{userId}")]
         public async Task<StatusCodeResult> DeleteAsync(string userId)
         {
             var userStore = new UserStore<ApplicationUser>(_context);
