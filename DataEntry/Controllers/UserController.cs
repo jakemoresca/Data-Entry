@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using DataEntry.Dao;
 using Microsoft.AspNetCore.Identity;
-using IdentityModel;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -40,6 +39,17 @@ namespace DataEntry.Controllers
                 .FirstOrDefault(x => x.Id == userId);
         }
 
+        [Authorize]
+        [HttpGet("[action]")]
+        public ApplicationUser Current()
+        {
+            var userClaims = User.Claims.ToList();
+            var nameClaim = userClaims.FirstOrDefault(x => x.Type == "name");
+            var user = _context.Users.FirstOrDefault(x => x.UserName == nameClaim.Value);
+
+            return user;
+        }
+
         [Authorize(Roles = "Administrator")]
         [HttpPost]
         public ApplicationUser Post(ApplicationUser user)
@@ -60,9 +70,8 @@ namespace DataEntry.Controllers
 
             var claims = new List<Claim>
             {
-                new Claim(JwtClaimTypes.Email, user.Email),
-                new Claim(JwtClaimTypes.Role, "User"),
-                new Claim(JwtClaimTypes.Name, user.UserName)
+                new Claim("email", user.Email),
+                new Claim("name", user.UserName)
             };
 
             userStore.AddClaimsAsync(user, claims);

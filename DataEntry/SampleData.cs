@@ -1,5 +1,4 @@
 ﻿using DataEntry.Dao;
-using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using System;
@@ -28,7 +27,7 @@ namespace DataEntry
                     var identityRole = new IdentityRole(role);
                     identityRole.NormalizedName = role;
                     await roleStore.CreateAsync(identityRole);
-                    await roleStore.AddClaimAsync(identityRole, new Claim(JwtClaimTypes.Role, "Administrator"));
+                    await roleStore.AddClaimAsync(identityRole, new Claim("role", "Administrator"));
                 }
             }
 
@@ -56,9 +55,9 @@ namespace DataEntry
 
                 var claims = new List<Claim>
                 {
-                    new Claim(JwtClaimTypes.Email, user.Email),
-                    new Claim(JwtClaimTypes.Role, "Administrator"),
-                    new Claim(JwtClaimTypes.Name, user.UserName)
+                    new Claim("email", user.Email),
+                    //new Claim("role", "Administrator"),
+                    new Claim("name", user.UserName)
                 };
 
                 await userStore.AddClaimsAsync(user, claims);

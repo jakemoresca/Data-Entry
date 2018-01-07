@@ -61,11 +61,17 @@ namespace DataEntry.Controllers
         [HttpPut("{jobId}")]
         public JobDto Put(Guid jobId, JobDto job)
         {
-            job.DateModified = DateTime.UtcNow;
-            _context.Jobs.Update(job);
+            var currentJob = _context.Jobs.FirstOrDefault(x => x.Id == jobId);
+            if (currentJob == null)
+                throw new Exception("Job not found");
+
+            currentJob.DateModified = DateTime.UtcNow;
+            currentJob.Name = job.Name;
+
+            _context.Jobs.Update(currentJob);
             _context.SaveChanges();
 
-            return job;
+            return currentJob;
         }
 
         [Authorize(Roles = "Administrator,User")]

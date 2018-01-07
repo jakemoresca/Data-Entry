@@ -16,12 +16,6 @@ namespace DataEntry.Dao
 
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
         public DbSet<JobDto> Jobs { get; set; }
-
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //{
-
-        //    optionsBuilder.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=DataEntry;Trusted_Connection=True;");
-        //}
     }
 
     public class ApplicationUser : IdentityUser

@@ -2,6 +2,7 @@ import { fetch, addTask } from 'domain-task';
 import { Action, Reducer, ActionCreator } from 'redux';
 import { AppThunkAction } from './';
 import * as jQuery from 'jquery';
+import { callApi } from './callApi';
 
 // -----------------
 // STATE - This defines the type of data maintained in the Redux store.
@@ -17,14 +18,7 @@ export interface Account {
     name: string;
     username: string;
     password: string;
-    access_token: Token;
-}
-
-export interface Token
-{
     access_token: string;
-    expires_in: number;
-    token_type: string;
 }
 
 // -----------------
@@ -69,12 +63,8 @@ export const actionCreators = {
     login: (username: string, password: string): AppThunkAction<KnownAction> => (dispatch, getState) => {
 
         let loginJSON: any = {
-            "grant_type": "password",
-            "client_id": "js",
-            "client_secret": "secret",
             "username": username,
-            "password": password,
-            "scope": "openid"
+            "password": password
         };
 
         var formBody = [];
@@ -88,7 +78,7 @@ export const actionCreators = {
         var loginBody = formBody.join("&");
 
         // Only load data if it's something we don't already have (and are not already loading)
-        let fetchTask = fetch('/connect/token', {
+        let fetchTask = fetch('./connect/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -98,14 +88,14 @@ export const actionCreators = {
         .then(response => response.json() as Promise<any>)
         .then(data =>
         {
-            localStorage.setItem('access_token', data.access_token)
+            localStorage.setItem('access_token', data.token)
 
             var account = {
                 id: "",
                 name: "",
                 username: username,
                 password: "",
-                access_token: data
+                access_token: data.token
             };
 
             dispatch({ type: 'RECEIVE_ACCOUNT', isLoggedIn: true, currentAccount: account });
@@ -116,10 +106,48 @@ export const actionCreators = {
 
     },
 
+    requestAccount: (): AppThunkAction<KnownAction> => (dispatch, getState) =>
+    {
+        if (!localStorage) return;
+
+        let fetchTask = callApi('api/user/current', true)// jQuery.get(`api/user/${ userId }`)
+            .then(response => response as Promise<any>)
+            .then(data => {
+
+                var access_token: string = localStorage.getItem('access_token') || "";
+
+                var account = {
+                    id: "",
+                    name: "",
+                    username: data.name,
+                    password: "",
+                    access_token: access_token
+                };
+
+                dispatch({ type: 'RECEIVE_ACCOUNT', isLoggedIn: true, currentAccount: account });
+            });
+
+        addTask(fetchTask); // Ensure server-side prerendering waits for this to complete
+    },
+
     updateCurrentLogin: (field: string, value: string): AppThunkAction<KnownAction> => (dispatch, getState) =>
     {
         dispatch({ type: 'UPDATE_CURRENT_LOGIN_VALUE', field: field, value: value });
     },
+
+    logout: (): AppThunkAction<KnownAction> => (dispatch, getState) => {
+        localStorage.removeItem('access_token');
+
+        var account = {
+            id: "",
+            name: "",
+            username: "",
+            password: "",
+            access_token: ""
+        };
+
+        dispatch({ type: 'RECEIVE_ACCOUNT', isLoggedIn: false, currentAccount: account });
+    }
 };
 
 // ----------------
@@ -133,11 +161,7 @@ const unloadedState: AccountState = {
         name: "",
         username: "",
         password: "",
-        access_token: {
-            access_token: "",
-            expires_in: 0,
-            token_type: ""
-        }
+        access_token: ""
     }
 };
 
@@ -157,12 +181,7 @@ export const reducer: Reducer<AccountState> = (state: AccountState, incomingActi
                     name: "",
                     username: "",
                     password: "",
-                    access_token: {
-                        ...state.currentAccount.access_token,
-                        access_token: "",
-                        expires_in: 0,
-                        token_type: ""
-                    }
+                    access_token: ""
                 }
             };
         case 'RECEIVE_ACCOUNT':
@@ -174,14 +193,9 @@ export const reducer: Reducer<AccountState> = (state: AccountState, incomingActi
                     ...state.currentAccount,
                     id: "",
                     //name: "",
-                    //username: action.currentAccount.username,
+                    username: action.currentAccount.username,
                     password: "",
-                    access_token: {
-                        ...state.currentAccount.access_token,
-                        access_token: action.currentAccount.access_token.access_token,
-                        expires_in: action.currentAccount.access_token.expires_in,
-                        token_type: action.currentAccount.access_token.token_type
-                    }
+                    access_token: action.currentAccount.access_token
                 }
             };
         case "UPDATE_CURRENT_LOGIN_VALUE":

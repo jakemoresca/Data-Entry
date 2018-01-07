@@ -57,8 +57,8 @@ class Jobs extends React.Component<JobsProps, {}> {
             {this.props.jobs.map(job =>
                 <tr key={ job.id }>
                     <td>{ job.name }</td>
-                    <td>{ job.dateCreated }</td>
-                    <td>{ job.dateModified }</td>
+                    <td>{ this.renderFriendlyDateFormat(job.dateCreated) }</td>
+                    <td>{ this.renderFriendlyDateFormat(job.dateModified) }</td>
                     <td>{ job.createdBy.email }</td>
                     <td>
                         <Link className='btn btn-default pull-right' to={ `/jobdetail/${job.id}` }>Edit</Link>
@@ -68,6 +68,11 @@ class Jobs extends React.Component<JobsProps, {}> {
             )}
             </tbody>
         </table>;
+    }
+
+    private renderFriendlyDateFormat(dateString: string) {
+        let date = new Date(dateString);
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
     }
 
     private renderPagination() {
