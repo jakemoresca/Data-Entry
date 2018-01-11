@@ -2,7 +2,10 @@
 
 export function callApi(endpoint: any, authenticated: any, config: Object = {})
 {
-    let token = localStorage.getItem('access_token') || null
+    var webStorage: any = require('web-storage');
+    var localStoragePkg = webStorage().localStorage;
+
+    let token = localStoragePkg.get('access_token') || null
     //let config = {}
 
     if (authenticated)

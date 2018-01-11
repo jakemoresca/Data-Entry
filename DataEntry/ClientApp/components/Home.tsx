@@ -12,7 +12,8 @@ type HomeProps =
 
 class Home extends React.Component<HomeProps, {}> {
 
-    componentWillMount() {
+    componentWillMount()
+    {
         this.props.requestAccount();
     }
 
@@ -38,8 +39,8 @@ class Home extends React.Component<HomeProps, {}> {
 
         if (isLoggedIn) {
             return <div>
-                <h1>Hi {currentAccount.name}</h1>
-                <button type="button" className="btn btn-default pull-right" onClick={() => this.handleLogout}>Logout</button>
+                <h1>Hi {currentAccount.username}</h1>
+                <button type="button" className="btn btn-default pull-right" onClick={this.handleLogout}>Logout</button>
             </div>;
         }
         else {

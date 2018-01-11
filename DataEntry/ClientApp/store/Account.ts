@@ -59,6 +59,9 @@ type KnownAction = RequestAccountAction | ReceiveAccountAction | LoginAction | L
 // ACTION CREATORS - These are functions exposed to UI components that will trigger a state transition.
 // They don't directly mutate state, but they can have external side-effects (such as loading data).
 
+var webStorage: any = require('web-storage');
+var localStoragePkg = webStorage().localStorage;
+
 export const actionCreators = {
     login: (username: string, password: string): AppThunkAction<KnownAction> => (dispatch, getState) => {
 
@@ -87,8 +90,8 @@ export const actionCreators = {
         })
         .then(response => response.json() as Promise<any>)
         .then(data =>
-        {
-            localStorage.setItem('access_token', data.token)
+        {;
+            localStoragePkg.set('access_token', data.token);
 
             var account = {
                 id: "",
@@ -108,18 +111,18 @@ export const actionCreators = {
 
     requestAccount: (): AppThunkAction<KnownAction> => (dispatch, getState) =>
     {
-        if (!localStorage) return;
+        if (!localStoragePkg.get('access_token')) return;
 
         let fetchTask = callApi('api/user/current', true)// jQuery.get(`api/user/${ userId }`)
             .then(response => response as Promise<any>)
             .then(data => {
 
-                var access_token: string = localStorage.getItem('access_token') || "";
+                var access_token: string = localStoragePkg.get('access_token') || "";
 
                 var account = {
                     id: "",
                     name: "",
-                    username: data.name,
+                    username: data.email,
                     password: "",
                     access_token: access_token
                 };
@@ -135,8 +138,9 @@ export const actionCreators = {
         dispatch({ type: 'UPDATE_CURRENT_LOGIN_VALUE', field: field, value: value });
     },
 
-    logout: (): AppThunkAction<KnownAction> => (dispatch, getState) => {
-        localStorage.removeItem('access_token');
+    logout: (): AppThunkAction<KnownAction> => (dispatch, getState) =>
+    {
+        localStoragePkg.remove('access_token');
 
         var account = {
             id: "",
@@ -174,7 +178,7 @@ export const reducer: Reducer<AccountState> = (state: AccountState, incomingActi
             return {
                 ...state,
                 isLoading: false,
-                isLoggedIn: localStorage.getItem('access_token') ? true : false,
+                isLoggedIn: localStoragePkg.get('access_token') ? true : false,
                 currentAccount: {
                     ...state.currentAccount,
                     id: "",
@@ -188,7 +192,7 @@ export const reducer: Reducer<AccountState> = (state: AccountState, incomingActi
             return {
                 ...state,
                 isLoading: false,
-                isLoggedIn: localStorage.getItem('access_token') ? true : false,
+                isLoggedIn: localStoragePkg.get('access_token') ? true : false,
                 currentAccount: {
                     ...state.currentAccount,
                     id: "",
@@ -202,7 +206,7 @@ export const reducer: Reducer<AccountState> = (state: AccountState, incomingActi
             return {
                 ...state,
                 isLoading: false,
-                isLoggedIn: true,
+                isLoggedIn: localStoragePkg.get('access_token') ? true : false,
                 currentAccount: {
                     ...state.currentAccount,
                     [action.field]: action.value

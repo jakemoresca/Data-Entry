@@ -25,41 +25,6 @@ namespace DataEntry
 
         public IConfiguration Configuration { get; }
 
-        //public class TestProfileService : IProfileService
-        //{
-        //    private readonly IUserClaimsPrincipalFactory<ApplicationUser> _claimsFactory;
-        //    private readonly UserManager<ApplicationUser> _userManager;
-
-        //    public TestProfileService(IUserClaimsPrincipalFactory<ApplicationUser> claimsFactory, UserManager<ApplicationUser> userManager)
-        //    {
-        //        _claimsFactory = claimsFactory;
-        //        _userManager = userManager;
-        //    }
-
-        //    public async Task GetProfileDataAsync(ProfileDataRequestContext context)
-        //    {
-        //        var sub = context.Subject.GetSubjectId();
-        //        var user = await _userManager.FindByIdAsync(sub);
-        //        if (user == null)
-        //        {
-        //            throw new ArgumentException("");
-        //        }
-
-        //        var principal = await _claimsFactory.CreateAsync(user);
-        //        var claims = principal.Claims.ToList();
-
-        //        context.IssuedClaims = claims;
-        //    }
-
-        //    public async Task IsActiveAsync(IsActiveContext context)
-        //    {
-        //        var sub = context.Subject.GetSubjectId();
-        //        var user = await _userManager.FindByIdAsync(sub);
-        //        context.IsActive = user != null;
-        //    }
-        //}
-
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().AddJsonOptions(options =>
@@ -109,9 +74,6 @@ namespace DataEntry
                 options.TokenValidationParameters = tokenValidationParameters;
                 options.RequireHttpsMetadata = false;
             });
-
-            // Add application services.
-            //services.AddTransient<IEmailSender, EmailSender>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -155,64 +117,5 @@ namespace DataEntry
                 await sampleData.InitializeAsync(context);
             }
         }
-
-        //protected IEnumerable<Client> GetClients()
-        //{
-        //    var javascriptClient = new Client
-        //    {
-        //        ClientId = "js",
-        //        ClientSecrets =
-        //        {
-        //            new Secret("secret".Sha256())
-        //        },
-
-        //        ClientName = "JavaScript Client",
-        //        AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-        //        AllowAccessTokensViaBrowser = true,
-
-        //        RedirectUris = { "http://localhost/callback.html" },
-        //        PostLogoutRedirectUris = { "http://localhost/index.html" },
-        //        AllowedCorsOrigins = { "http://localhost" },
-
-        //        AllowedScopes =
-        //        {
-        //            IdentityServerConstants.StandardScopes.Profile,
-        //            IdentityServerConstants.StandardScopes.OpenId
-        //        }
-        //    };
-
-        //    return new List<Client> { javascriptClient };
-        //}
-
-        //public static IEnumerable<IdentityResource> GetIdentityResources()
-        //{
-        //    return new List<IdentityResource>
-        //    {
-        //        new IdentityResources.Email(),
-        //        new IdentityResources.Profile(),
-        //        new IdentityResources.OpenId(),
-        //        new IdentityResource
-        //        {
-        //            Name = JwtClaimTypes.Role,
-        //            UserClaims = new List<string> { JwtClaimTypes.Role }
-        //        }
-        //    };
-        //}
-
-        //public static IEnumerable<ApiResource> GetApis()
-        //{
-        //    return new[]
-        //    {
-        //        new ApiResource
-        //        {
-        //            Name = "openid",
-        //            Description = "Some API 1",
-        //            UserClaims =
-        //            {
-        //                JwtClaimTypes.Role
-        //            }
-        //        }
-        //    };
-        //}
     }
 }
